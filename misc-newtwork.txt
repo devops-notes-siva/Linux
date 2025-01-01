@@ -1,0 +1,120 @@
+Firewall setup
+============================
+$ sudo firewall-cmd --zone=public --add-port=443/tcp --permanent
+$ sudo firewall-cmd --reload
+$ sudo firewall-cmd --state
+
+Selinux:
+=========
+->check sestatus and disable
+    $ sestatus
+If SELinux is enforcing and you're still having network issues, you can temporarily set it to permissive mode to check if it's the cause:
+    $ sudo setenforce 0
+to disble se linux permanently:
+    $ sudo vi /etc/selinux/config
+        SELINUX=enforcing to SELINUX=disabled
+    $ sudo reboot
+    $ sestatus
+
+Network Issue:
+============
+ 1. Check Internet Connectivity
+    $ ping -c 4 8.8.8.8
+If you don't, it indicates a network issue that requires further troubleshooting.
+Check DNS Resolution
+
+2. Check DNS Resolution
+If you can ping IP addresses (like 8.8.8.8), but not domain names (like google.com), the issue is likely with DNS configuration.
+To check DNS settings, use:
+    $ nmcli dev show | grep DNS
+If the DNS settings are missing or incorrect, you can modify them.
+
+3. Modify DNS Settings (if necessary)
+You can update the DNS settings for the connected interface (e.g., enp0s8 or enp0s9) using the nmcli command. For example, to set Google's DNS servers:
+    $ sudo nmcli con mod "Wired connection 1" ipv4.dns "8.8.8.8 8.8.4.4"
+    $ sudo nmcli con up "Wired connection 1"
+Replace "Wired connection 1" with the correct connection name if necessary.
+
+4. Ensure the Correct Interface is Being Used
+If you want to ensure that enp0s8 or enp0s9 is the active network interface, you can check which interface is being used by routing.
+Check the current routing table:
+    $ ip route show
+If the default route (default via) points to an interface you don't intend to use, you may need to adjust the routing or bring the unused interface down. For example, if enp0s3 is not in use, you can disable it:
+    $ sudo nmcli con down "Wired connection 2"
+
+5. Restart the Network Connection
+To restart a specific network connection (e.g., Wired connection 1), use:
+ $ sudo nmcli con down "Wired connection 1" && sudo nmcli con up "Wired connection 1"
+This will restart the network interface and refresh its configuration.
+
+====================================================
+====================================================
+ find the correct connection name (like "Wired connection 1") that you need to replace in the nmcli command, you can list all the available network connections on your CentOS 9 system.
+
+Steps to Find the Correct Connection Name
+List All Network Connections: You can use the nmcli command to display a list of all network connections on your system:
+     $ nmcli connection show
+This will give you an output like:
+
+NAME                UUID                                  TYPE      DEVICE
+Wired connection 1  abcdefgh-1234-5678-abcd-efghijklmnop  ethernet  enp0s8
+Wired connection 2  12345678-abcd-1234-5678-abcdefgxyz9876  ethernet  enp0s9
+In this example:
+
+The name of the first connection is "Wired connection 1".
+The name of the second connection is "Wired connection 2".
+The device column shows the interface name (enp0s8 and enp0s9).
+Use the Correct Connection Name: The connection names are listed under the NAME column. In the example above, you would replace "Wired connection 1" in your command with the actual connection name from the list.
+
+Example of Modifying DNS for a Specific Connection
+If you want to modify the DNS settings for the first network connection ("Wired connection 1"), run:
+    $ sudo nmcli con mod "Wired connection 1" ipv4.dns "8.8.8.8 8.8.4.4"
+    $ sudo nmcli con up "Wired connection 1"
+If your connection name is "Wired connection 2", replace the names in the command:
+    $ sudo nmcli con mod "Wired connection 2" ipv4.dns "8.8.8.8 8.8.4.4"
+    $ sudo nmcli con up "Wired connection 2"
+to check 
+    $ nmcli dev show | grep DNS
+    $ nmcli connection show "Wired connection 1"
+
+    Check the /etc/resolv.conf File
+========================================================
+=========================================================
+
+NetworkManager Status
+=====================
+In CentOS 9 (and other RHEL-based distributions like Rocky Linux 9 or AlmaLinux 9), the traditional network.service has been replaced with NetworkManager for managing network interfaces. You will no longer find the network.service in CentOS 9, and network configuration is handled by NetworkManager or the nmcli command.
+
+1. Verify the NetworkManager Status
+To manage the network services, use NetworkManager. First, check if the NetworkManager service is running:
+    $ sudo systemctl status NetworkManager
+If it's not running, you can start it with:
+    $ sudo systemctl start NetworkManager
+To enable NetworkManager to start at boot time:
+    $ sudo systemctl enable NetworkManager
+
+2. Restart Network Interfaces Using nmcli
+If you need to bring a specific network interface down or up, use nmcli (NetworkManager's command-line interface).
+Check the status of network interfaces:
+    $ nmcli device status
+Bring the interface down and then up again:
+For example, if your network interface is named eth0, replace it with your actual interface name, and use the following commands to restart it:
+    $ sudo nmcli connection down eth0
+    $ sudo nmcli connection up eth0
+3. Restart Network Using nmcli for All Interfaces
+To restart all network connections (which is equivalent to restarting the networking service), use:
+    $ sudo nmcli networking off
+    $ sudo nmcli networking on
+This will disable and then enable all network interfaces.
+
+4. Checking and Modifying DNS Configuration
+If you're facing DNS-related issues (like the Network is unreachable error you encountered earlier), you can modify the DNS configuration using nmcli.
+To view your current DNS settings:
+    $ nmcli dev show | grep DNS
+If the DNS settings are not correct or you want to change them, use this command:
+    $ sudo nmcli con mod "System eth0" ipv4.dns "8.8.8.8 8.8.4.4"
+    $ sudo nmcli con up "System eth0"
+Replace "System eth0" with the correct name of your network connection if it differs.
+
+
+
